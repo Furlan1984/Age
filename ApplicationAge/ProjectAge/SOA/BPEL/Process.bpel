@@ -1,0 +1,62 @@
+<?xml version = "1.0" encoding = "UTF-8" ?>
+<!--
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  Oracle JDeveloper BPEL Designer
+
+  Created: Thu Feb 20 17:27:45 GMT-03:00 2020
+  Author:  nelson.furlan
+  Type: BPEL 2.0 Process
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+-->
+<process name="Process"
+         targetNamespace="http://xmlns.oracle.com/ApplicationAge/ProjectAge/Process"
+         xmlns="http://docs.oasis-open.org/wsbpel/2.0/process/executable"
+         xmlns:client="http://xmlns.oracle.com/ApplicationAge/ProjectAge/Process"
+         xmlns:ora="http://schemas.oracle.com/xpath/extension"
+         xmlns:bpelx="http://schemas.oracle.com/bpel/extension"
+         xmlns:bpel="http://docs.oasis-open.org/wsbpel/2.0/process/executable"
+         xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+         xmlns:ns1="json" xmlns:ns2="http://xmlns.oracle.com/pcbpel/adapter/db/ApplicationAge/ProjectAge/dbReference"
+         xmlns:ns3="http://xmlns.oracle.com/pcbpel/adapter/db/sp/dbReference"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="http://xmlns.oracle.com/soa/designer">
+
+    <!--
+      ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+       ORCHESTRATION LOGIC
+       Set of activities coordinating the flow of messages across the
+       services integrated within this business process
+      ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    -->
+    <import namespace="http://xmlns.oracle.com/pcbpel/adapter/db/ApplicationAge/ProjectAge/dbReference"
+            location="../WSDLs/dbReference.wsdl" importType="http://schemas.xmlsoap.org/wsdl/" ui:processWSDL="true"/>
+    <partnerLinks>
+        <partnerLink name="RestServiceAge" bpelx:wadl="yes"/>
+        <partnerLink name="dbReference" partnerLinkType="ns2:dbReference_plt" partnerRole="dbReference_role"/>
+    </partnerLinks>
+    <variables>
+        <variable name="inputVar" bpelx:json="string"/>
+        <variable name="outputVar" bpelx:json="string"/>
+        <variable name="dbReference_InputVariable" messageType="ns2:args_in_msg"/>
+        <variable name="dbReference_OutputVariable" messageType="ns2:args_out_msg"/>
+    </variables>
+    <sequence name="main">
+        <receive name="Receive" partnerLink="RestServiceAge" variable="inputVar" bpelx:method="MethodAge"
+                 createInstance="yes"/>
+        <assign name="AssignInput">
+            <copy>
+                <from expressionLanguage="javascript">process.inputVar</from>
+                <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$dbReference_InputVariable.InputParameters/ns3:PAYLOADIN</to>
+            </copy>
+        </assign>
+        <invoke name="InvokeDb" partnerLink="dbReference" portType="ns2:dbReference_ptt"
+                operation="dbReference" inputVariable="dbReference_InputVariable"
+                outputVariable="dbReference_OutputVariable" bpelx:invokeAsDetail="no"/>
+        <assign name="AssignOutput">
+            <copy>
+                <from>$dbReference_OutputVariable.OutputParameters/ns3:PAYLOADOUT</from>
+                <to expressionLanguage="javascript">process.outputVar</to>
+            </copy>
+        </assign>
+        <reply name="Reply" partnerLink="RestServiceAge" variable="outputVar" bpelx:method="MethodAge"/>
+    </sequence>
+</process>
